@@ -1,3 +1,5 @@
+// File: index.js (Backend - Full Code)
+
 const express = require('express')
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
@@ -5,6 +7,7 @@ const app = express();
 const cors = require('cors');
 const port = process.env.PORT || 9000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -23,47 +26,100 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Database and Collections
-        const db = client.db('MoodIndexDB'); // Define the database instance
+        const db = client.db('MoodIndexDB');
         const userCollection = client.db('MoodIndexDB').collection('users');
         const assessmentCollection = client.db('MoodIndexDB').collection('assessments');
 
-        // send user data to the database
+        // Connect the client to the server
+        await client.connect();
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+
+        // =========================================================================
+        // ⭐️ 1. GENERALIZED ROUTE: PATCH Update User Data by Email (Handles Name in MongoDB)
+        // =========================================================================
+        app.patch('/users/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const updateFields = req.body;
+
+                if (!updateFields || Object.keys(updateFields).length === 0) {
+                    return res.status(400).send({ success: false, message: 'No fields provided' });
+                }
+
+                const query = { email };
+                const updateDoc = { $set: updateFields };
+                const result = await userCollection.updateOne(query, updateDoc);
+
+                res.status(200).send({
+                    success: true,
+                    message: 'User updated successfully',
+                    matchedCount: result.matchedCount,
+                    modifiedCount: result.modifiedCount,
+                });
+            } catch (err) {
+                console.error(err);
+                res.status(500).send({ success: false, message: 'Internal server error' });
+            }
+        });
+
+
+
+        // =========================================================================
+        // 2. OTHER ROUTES (Existing Logic)
+        // =========================================================================
+
+        app.get('/users/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const query = { email: email };
+                const user = await userCollection.findOne(query);
+                if (!user) { return res.status(404).send({ success: false, message: 'User not found in database.' }); }
+                res.send(user);
+            } catch (error) { res.status(500).send({ success: false, message: 'Internal server error.' }); }
+        });
+
         app.post('/users', async (req, res) => {
             const users = req.body
             const result = await userCollection.insertOne(users)
             res.send(result)
         });
 
+       // Delete user by email
+app.delete('/users/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    const result = await userCollection.deleteOne({ email });
+    if (result.deletedCount === 0)
+      return res.status(404).send({ success: false, message: 'User not found' });
+    res.send({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ success: false, message: 'Failed to delete user' });
+  }
+});
 
-        // Save a new assessment result to the database
+
+
+
+
         app.post('/results', async (req, res) => {
             const resultRecord = req.body;
             const result = await assessmentCollection.insertOne(resultRecord);
             res.send(result);
         });
 
-        // Fetch user's assessment history
         app.get('/results/:email', async (req, res) => {
             const email = req.params.email;
             const query = { userEmail: email };
-            // Sort by timestamp descending (-1) to get the latest results easily
             const results = await assessmentCollection.find(query).sort({ timestamp: -1 }).toArray();
             res.send(results);
         });
-        
-        // app.get('/results', async (req, res) => {
-        //     const result = await assessmentCollection.find().toArray();
-        //     res.send(result)
-        // });
-        
-        // Connect the client to the server
-        await client.connect();
-        // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
     } finally {
         // Ensures that the client will close when you finish/error
-        // await client.close();
+        // await client.close(); 
     }
 }
 run().catch(console.dir);
