@@ -13,48 +13,66 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true,
+    }
 });
 
 async function run() {
-  try {
+    try {
+        // Database and Collections
+        const db = client.db('MoodIndexDB'); // Define the database instance
+        const userCollection = client.db('MoodIndexDB').collection('users');
+        const assessmentCollection = client.db('MoodIndexDB').collection('assessments');
 
-
-    const userCollection = client.db('MoodIndexDB').collection('users');
-
-    // send user data api to database
-    app.post('/users', async (req, res) => {
+        // send user data to the database
+        app.post('/users', async (req, res) => {
             const users = req.body
             const result = await userCollection.insertOne(users)
             res.send(result)
         });
 
 
+        // Save a new assessment result to the database
+        app.post('/results', async (req, res) => {
+            const resultRecord = req.body;
+            const result = await assessmentCollection.insertOne(resultRecord);
+            res.send(result);
+        });
 
-
-
-
-    // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
-    // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
-  }
+        // Fetch user's assessment history
+        app.get('/results/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { userEmail: email };
+            // Sort by timestamp descending (-1) to get the latest results easily
+            const results = await assessmentCollection.find(query).sort({ timestamp: -1 }).toArray();
+            res.send(results);
+        });
+        
+        // app.get('/results', async (req, res) => {
+        //     const result = await assessmentCollection.find().toArray();
+        //     res.send(result)
+        // });
+        
+        // Connect the client to the server
+        await client.connect();
+        // Send a ping to confirm a successful connection
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    } finally {
+        // Ensures that the client will close when you finish/error
+        // await client.close();
+    }
 }
 run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-  res.send('Welcome To Mood Index platform! ')
+    res.send('Welcome To Mood Index platform! ')
 })
 
 app.listen(port, () => {
-  console.log(`MoodIndex is running on port ${port}`)
+    console.log(`MoodIndex is running on port ${port}`)
 })
