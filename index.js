@@ -26,9 +26,10 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Database and Collections
-        const db = client.db('MoodIndexDB');
+        // const db = client.db('MoodIndexDB');
         const userCollection = client.db('MoodIndexDB').collection('users');
         const assessmentCollection = client.db('MoodIndexDB').collection('assessments');
+        const contactedCollection = client.db('MoodIndexDB').collection('contactedUser');
 
         // Connect the client to the server
         await client.connect();
@@ -36,9 +37,7 @@ async function run() {
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
 
-        // =========================================================================
-        // ⭐️ 1. GENERALIZED ROUTE: PATCH Update User Data by Email (Handles Name in MongoDB)
-        // =========================================================================
+
         app.patch('/users/:email', async (req, res) => {
             try {
                 const email = req.params.email;
@@ -65,11 +64,6 @@ async function run() {
         });
 
 
-
-        // =========================================================================
-        // 2. OTHER ROUTES (Existing Logic)
-        // =========================================================================
-
         app.get('/users/:email', async (req, res) => {
             try {
                 const email = req.params.email;
@@ -86,23 +80,20 @@ async function run() {
             res.send(result)
         });
 
-       // Delete user by email
-app.delete('/users/:email', async (req, res) => {
-  try {
-    const email = req.params.email;
-    const result = await userCollection.deleteOne({ email });
-    if (result.deletedCount === 0)
-      return res.status(404).send({ success: false, message: 'User not found' });
-    res.send({ success: true, message: 'User deleted successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ success: false, message: 'Failed to delete user' });
-  }
-});
 
-
-
-
+        // Delete user by email
+        app.delete('/users/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const result = await userCollection.deleteOne({ email });
+                if (result.deletedCount === 0)
+                    return res.status(404).send({ success: false, message: 'User not found' });
+                res.send({ success: true, message: 'User deleted successfully' });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ success: false, message: 'Failed to delete user' });
+            }
+        });
 
         app.post('/results', async (req, res) => {
             const resultRecord = req.body;
@@ -115,6 +106,21 @@ app.delete('/users/:email', async (req, res) => {
             const query = { userEmail: email };
             const results = await assessmentCollection.find(query).sort({ timestamp: -1 }).toArray();
             res.send(results);
+        });
+
+        //   contact data show 
+        app.get('/messages', async (req, res) => {
+            const result = await contactedCollection.find().toArray();
+            res.send(result);
+        });
+
+
+        // contact data receive from client side visitor
+        app.post('/contactedUser', async (req, res) => {
+            const contactedUser = req.body
+            console.log(contactedUser)
+            const result = await contactedCollection.insertOne(contactedUser)
+            res.send(result)
         });
 
     } finally {
