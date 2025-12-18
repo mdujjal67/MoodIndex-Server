@@ -1,5 +1,3 @@
-// File: index.js (Backend - Full Code)
-
 const express = require('express')
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
@@ -14,7 +12,6 @@ app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.7tyfnet.mongodb.net/?appName=Cluster0`;
 
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
@@ -25,8 +22,6 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try {
-        // Database and Collections
-        // const db = client.db('MoodIndexDB');
         const userCollection = client.db('MoodIndexDB').collection('users');
         const assessmentCollection = client.db('MoodIndexDB').collection('assessments');
         const contactedCollection = client.db('MoodIndexDB').collection('contactedUser');
@@ -74,11 +69,39 @@ async function run() {
             } catch (error) { res.status(500).send({ success: false, message: 'Internal server error.' }); }
         });
 
-        app.post('/users', async (req, res) => {
-            const users = req.body
-            const result = await userCollection.insertOne(users)
-            res.send(result)
+        // ⭐️ NEW: Upsert Route (Handles Google Login & Registration)
+        app.put('/users/:email', async (req, res) => {
+            try {
+                const email = req.params.email;
+                const user = req.body;
+                const query = { email: email };
+                const options = { upsert: true }; // This is the magic: Create if doesn't exist
+
+                const updateDoc = {
+                    $set: {
+                        name: user.name,
+                        email: user.email,
+                        photoURL: user.photoURL,
+                        // Only set role if it's a new user to prevent overwriting admins
+                        ...(user.role && { role: user.role })
+                    },
+                };
+
+                const result = await userCollection.updateOne(query, updateDoc, options);
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ message: "Failed to sync user" });
+            }
         });
+
+        
+        // This method is replace via app.put('/users')
+        // app.post('/users', async (req, res) => {
+        //     const users = req.body
+        //     const result = await userCollection.insertOne(users)
+        //     res.send(result)
+        // });
 
 
         // Delete user by email
