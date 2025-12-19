@@ -6,9 +6,9 @@ const cors = require('cors');
 const port = process.env.PORT || 9000;
 
 // Middleware
-const corsOptions = {
-    origin: ['http://localhost:5173',
-        'https://moodindex-sort.web.app',
+const corsOptions ={
+    origin: ['http://localhost:5173', 
+        'https://moodindex-sort.web.app', 
         'https://moodindex-sort.firebaseapp.com'],
     credentials: true
 }
@@ -162,14 +162,7 @@ async function run() {
             const result = await contactedCollection.insertOne(contactedUser)
             res.send(result)
         });
-
-        app.get('/env-test', (req, res) => {
-            res.send({
-                user: !!process.env.DB_USER,
-                pass: !!process.env.DB_PASS
-            });
-        });
-
+        
 
     } finally {
         // Ensures that the client will close when you finish/error
