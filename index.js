@@ -6,7 +6,13 @@ const cors = require('cors');
 const port = process.env.PORT || 9000;
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+    origin: ['http://localhost:5173',
+        'https://moodindex-sort.web.app',
+        'https://moodindex-sort.firebaseapp.com'],
+    credentials: true
+}
+app.use(cors(corsOptions));
 app.use(express.json());
 
 
@@ -157,6 +163,14 @@ async function run() {
             res.send(result)
         });
 
+        app.get('/env-test', (req, res) => {
+            res.send({
+                user: !!process.env.DB_USER,
+                pass: !!process.env.DB_PASS
+            });
+        });
+
+
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close(); 
@@ -171,4 +185,7 @@ app.get('/', (req, res) => {
 
 app.listen(port, () => {
     console.log(`MoodIndex is running on port ${port}`)
-})
+});
+
+// / At the very bottom of index.js, add this:
+module.exports = app;
