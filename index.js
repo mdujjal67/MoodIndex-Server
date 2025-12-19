@@ -95,7 +95,7 @@ async function run() {
             }
         });
 
-        
+
         // This method is replace via app.put('/users')
         // app.post('/users', async (req, res) => {
         //     const users = req.body
@@ -104,17 +104,28 @@ async function run() {
         // });
 
 
-        // Delete user by email
+        // Delete user AND all associated assessment results by email
         app.delete('/users/:email', async (req, res) => {
             try {
                 const email = req.params.email;
+
+                // 1. Delete all assessment records linked to this email
+                await assessmentCollection.deleteMany({ userEmail: email });
+
+                // 2. Delete the user from the user collection
                 const result = await userCollection.deleteOne({ email });
-                if (result.deletedCount === 0)
+
+                if (result.deletedCount === 0) {
                     return res.status(404).send({ success: false, message: 'User not found' });
-                res.send({ success: true, message: 'User deleted successfully' });
+                }
+
+                res.send({
+                    success: true,
+                    message: 'User and all associated assessment data deleted successfully'
+                });
             } catch (error) {
                 console.error(error);
-                res.status(500).send({ success: false, message: 'Failed to delete user' });
+                res.status(500).send({ success: false, message: 'Failed to delete user and their data' });
             }
         });
 
