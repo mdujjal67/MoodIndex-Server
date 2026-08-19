@@ -31,11 +31,16 @@ async function run() {
         const userCollection = client.db('MoodIndexDB').collection('users');
         const assessmentCollection = client.db('MoodIndexDB').collection('assessments');
         const contactedCollection = client.db('MoodIndexDB').collection('contactedUser');
+        const feedbackCollection = client.db('MoodIndexDB').collection('feedbackData');
+
+
+        //  ******** I have to must comment these 2 lines to work vercel server to run live the server***********
 
         // Connect the client to the server
-        await client.connect();
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.connect();await client.connect();
+        // await client.db("admin").command({ ping: 1 });
+        
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
 
 
@@ -161,6 +166,30 @@ async function run() {
             console.log(contactedUser)
             const result = await contactedCollection.insertOne(contactedUser)
             res.send(result)
+        });
+
+
+        // Feedback POST Method
+        app.post('/feedbacks', async (req, res) => {
+            try {
+                const feedbackData = req.body;
+                const result = await feedbackCollection.insertOne(feedbackData);
+                res.send({ success: true, insertedId: result.insertedId, message: 'Feedback saved successfully' });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ success: false, message: 'Failed to save feedback' });
+            }
+        });
+
+        //  Feedback GET Method (to display on homepage testimonials)
+        app.get('/feedbacks', async (req, res) => {
+            try {
+                const result = await feedbackCollection.find().sort({ createdAt: -1 }).toArray();
+                res.send(result);
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ success: false, message: 'Failed to fetch feedbacks' });
+            }
         });
         
 
