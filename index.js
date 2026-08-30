@@ -6,9 +6,9 @@ const cors = require('cors');
 const port = process.env.PORT || 9000;
 
 // Middleware
-const corsOptions ={
-    origin: ['http://localhost:5173', 
-        'https://moodindex-sort.web.app', 
+const corsOptions = {
+    origin: ['http://localhost:5173',
+        'https://moodindex-sort.web.app',
         'https://moodindex-sort.firebaseapp.com'],
     credentials: true
 }
@@ -39,7 +39,7 @@ async function run() {
         // Connect the client to the server
         // await client.connect();await client.connect();
         // await client.db("admin").command({ ping: 1 });
-        
+
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
 
@@ -80,7 +80,7 @@ async function run() {
             } catch (error) { res.status(500).send({ success: false, message: 'Internal server error.' }); }
         });
 
-        // ⭐️ NEW: Upsert Route (Handles Google Login & Registration)
+        // NEW: Upsert Route (Handles Google Login & Registration)
         app.put('/users/:email', async (req, res) => {
             try {
                 const email = req.params.email;
@@ -153,6 +153,26 @@ async function run() {
             res.send(results);
         });
 
+        // Update session satisfaction rating
+        app.patch('/update-satisfaction', async (req, res) => {
+            try {
+                const { userEmail, sessionId, satisfactionCount } = req.body;
+
+                const result = await assessmentCollection.updateOne(
+                    { userEmail: userEmail, sessionId: Number(sessionId) },
+                    { $set: { satisfactionCount: Number(satisfactionCount) } }
+                );
+
+                if (result.modifiedCount > 0) {
+                    res.status(200).json({ success: true, message: "Satisfaction updated successfully" });
+                } else {
+                    res.status(404).json({ success: false, error: "Session not found or already updated" });
+                }
+            } catch (error) {
+                res.status(500).json({ success: false, message: 'Failed to update satisfaction', error: error.message });
+            }
+        });
+
         //   contact data show 
         app.get('/messages', async (req, res) => {
             const result = await contactedCollection.find().toArray();
@@ -191,7 +211,7 @@ async function run() {
                 res.status(500).send({ success: false, message: 'Failed to fetch feedbacks' });
             }
         });
-        
+
 
     } finally {
         // Ensures that the client will close when you finish/error
